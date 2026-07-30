@@ -179,26 +179,18 @@ export default function OfficialDistrictDetailPage({
     <div className="space-y-8">
       {/* Top Header Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/official/districts"
-            className="p-2 rounded-lg text-slate-500 hover:bg-slate-200 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                {district.name} District
-              </h1>
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                {district.province} Province
-              </span>
-            </div>
-            <p className="text-sm text-slate-500 mt-0.5">
-              Hydrological monitoring, rainfall trends, and AI risk prediction
-            </p>
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+              {district.name} District
+            </h1>
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+              {district.province} Province
+            </span>
           </div>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Hydrological monitoring, rainfall trends, and AI risk prediction
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

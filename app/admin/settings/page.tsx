@@ -17,7 +17,7 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <div className="border-b border-slate-200 pb-5">
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
           <Settings className="w-6 h-6 text-teal-600" />

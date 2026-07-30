@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import randomBytes from "node:crypto";
 import prisma from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
-import { sendVerificationEmail } from "@/lib/email";
+import { sendVerificationOtpEmail } from "@/lib/email";
 import { Role } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, email, password, role, districtId } = body;
+    const { name, email, password, districtId } = body;
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -35,10 +34,12 @@ export async function POST(req: NextRequest) {
     }
 
     const hashedPassword = await hashPassword(String(password));
-    const token = randomBytes.randomBytes(32).toString("hex");
+
+    // Generate 6-digit numeric OTP code
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    // Every self-registered user defaults strictly to RESIDENT. Admins assign OFFICIAL or ADMIN roles.
+    // Every self-registered user defaults strictly to RESIDENT.
     const selectedRole: Role = Role.RESIDENT;
 
     const newUser = await prisma.user.create({
@@ -49,19 +50,19 @@ export async function POST(req: NextRequest) {
         role: selectedRole,
         districtId: districtId ? String(districtId) : null,
         isVerified: false,
-        verificationToken: token,
+        verificationToken: otpCode,
         verificationExpiry: expiry,
       },
     });
 
-    const origin = req.headers.get("origin") || req.nextUrl.origin;
-    await sendVerificationEmail(cleanEmail, token, origin);
+    await sendVerificationOtpEmail(cleanEmail, otpCode);
 
     return NextResponse.json({
       success: true,
       message:
-        "Registration successful. Please check your email to verify your account before logging in.",
+        "Registration successful! Check your email for your 6-digit verification OTP code.",
       userId: newUser.id,
+      email: cleanEmail,
     });
   } catch (error: any) {
     console.error("Registration error:", error);

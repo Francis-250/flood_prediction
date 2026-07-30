@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { RiskLevel } from "@prisma/client";
 
 export async function GET() {
   try {
@@ -14,26 +15,29 @@ export async function GET() {
       select: { districtId: true },
     });
 
-    let districtId = user?.districtId;
+    const homeDistrictId = user?.districtId;
 
-    if (!districtId) {
-      const firstD = await prisma.district.findFirst();
-      districtId = firstD?.id;
-    }
-
-    if (!districtId) {
-      return NextResponse.json({ success: true, data: [] });
-    }
-
+    // Fetch alerts for home district AND all HIGH/MEDIUM risk broadcasts nationwide
+    // (so residents moving or traveling for the day are notified of all active warnings)
     const alerts = await prisma.alert.findMany({
-      where: { districtId },
+      where: {
+        OR: [
+          homeDistrictId ? { districtId: homeDistrictId } : {},
+          { riskLevel: RiskLevel.HIGH },
+          { riskLevel: RiskLevel.MEDIUM },
+        ],
+      },
       include: {
         district: { select: { id: true, name: true, province: true } },
       },
       orderBy: { sentAt: "desc" },
     });
 
-    return NextResponse.json({ success: true, data: alerts });
+    return NextResponse.json({
+      success: true,
+      homeDistrictId: homeDistrictId || null,
+      data: alerts,
+    });
   } catch (error: any) {
     console.error("Resident Alerts GET error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

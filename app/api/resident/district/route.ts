@@ -56,13 +56,26 @@ export async function GET() {
       include: {
         predictions: { orderBy: { createdAt: "desc" }, take: 1 },
         rainfallRecords: { orderBy: { date: "desc" }, take: 1 },
-        alerts: { orderBy: { sentAt: "desc" }, take: 5 },
       },
     });
 
     if (!district) {
       return NextResponse.json({ success: false, error: "Assigned district not found" }, { status: 404 });
     }
+
+    const recentAlerts = await prisma.alert.findMany({
+      where: {
+        OR: [
+          { districtId: district.id },
+          { riskLevel: RiskLevel.HIGH },
+        ],
+      },
+      include: {
+        district: { select: { id: true, name: true, province: true } },
+      },
+      orderBy: { sentAt: "desc" },
+      take: 5,
+    });
 
     let latestPred = district.predictions[0];
     const latestRain = district.rainfallRecords[0];
@@ -101,7 +114,7 @@ export async function GET() {
         reasoning: latestPred ? latestPred.reasoning : "Precipitation within normal seasonal thresholds.",
         latestRainfallMm: latestRain ? latestRain.rainfallMm : 0,
         latestRainfallDate: latestRain ? latestRain.date : null,
-        recentAlerts: district.alerts,
+        recentAlerts: recentAlerts,
       },
     });
   } catch (error: any) {

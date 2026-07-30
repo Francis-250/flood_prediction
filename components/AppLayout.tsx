@@ -37,17 +37,21 @@ export default function AppLayout({ user, children }: AppLayoutProps) {
     });
   };
 
+  const isResident = user.role === Role.RESIDENT;
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans relative overflow-x-hidden">
-      {/* 100vh Fixed Left Sidebar */}
-      <Sidebar
-        role={user.role}
-        isCollapsed={isCollapsed}
-        isOpenMobile={isMobileMenuOpen}
-        onCloseMobile={() => setIsMobileMenuOpen(false)}
-      />
+      {/* Sidebar is hidden for RESIDENT users */}
+      {!isResident && (
+        <Sidebar
+          role={user.role}
+          isCollapsed={isCollapsed}
+          isOpenMobile={isMobileMenuOpen}
+          onCloseMobile={() => setIsMobileMenuOpen(false)}
+        />
+      )}
 
-      {/* Top Header taking remaining right width */}
+      {/* Top Header */}
       <Header
         user={user}
         isCollapsed={isCollapsed}
@@ -56,11 +60,11 @@ export default function AppLayout({ user, children }: AppLayoutProps) {
         isMobileMenuOpen={isMobileMenuOpen}
       />
 
-      {/* Main Content Area starting strictly below fixed 64px Header */}
+      {/* Main Content Area */}
       <main
         style={{ marginTop: "64px" }}
         className={`flex-1 p-4 sm:p-6 lg:p-8 transition-all duration-300 min-h-[calc(100vh-4rem)] overflow-x-hidden ${
-          isCollapsed ? "md:ml-16" : "md:ml-64"
+          isResident ? "ml-0 w-full" : isCollapsed ? "md:ml-16" : "md:ml-64"
         }`}
       >
         {children}

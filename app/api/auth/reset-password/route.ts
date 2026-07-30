@@ -5,11 +5,12 @@ import { hashPassword } from "@/lib/password";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { token, password } = body;
+    const { email, otp, token, password } = body;
+    const resetOtp = otp || token;
 
-    if (!token || !password) {
+    if (!resetOtp || !password) {
       return NextResponse.json(
-        { success: false, error: "Reset token and new password are required" },
+        { success: false, error: "6-digit OTP code and new password are required" },
         { status: 400 }
       );
     }
@@ -21,22 +22,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const cleanOtp = String(resetOtp).trim();
+    const cleanEmail = email ? String(email).trim().toLowerCase() : undefined;
+
     const user = await prisma.user.findFirst({
       where: {
-        resetToken: token,
+        resetToken: cleanOtp,
+        ...(cleanEmail ? { email: cleanEmail } : {}),
       },
     });
 
     if (!user) {
       return NextResponse.json(
-        { success: false, error: "Invalid or expired password reset link" },
+        { success: false, error: "Invalid 6-digit OTP reset code" },
         { status: 400 }
       );
     }
 
     if (user.resetExpiry && user.resetExpiry < new Date()) {
       return NextResponse.json(
-        { success: false, error: "Password reset link has expired. Please request a new one." },
+        { success: false, error: "Password reset OTP code has expired. Please request a new one." },
         { status: 400 }
       );
     }

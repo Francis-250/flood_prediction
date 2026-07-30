@@ -106,7 +106,7 @@ export default function ResidentDashboardPage() {
   const safety = getSafetyInstructions(data.currentRisk);
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
+    <div className="w-full space-y-8">
       {/* Header */}
       <div className="border-b border-slate-200 pb-5">
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">

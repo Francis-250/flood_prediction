@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import randomBytes from "node:crypto";
 import prisma from "@/lib/prisma";
-import { sendPasswordResetEmail } from "@/lib/email";
+import { sendPasswordResetOtpEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,26 +20,25 @@ export async function POST(req: NextRequest) {
     });
 
     if (user) {
-      const token = randomBytes.randomBytes(32).toString("hex");
-      const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      // Generate 6-digit OTP code for password reset
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
       await prisma.user.update({
         where: { id: user.id },
         data: {
-          resetToken: token,
+          resetToken: otpCode,
           resetExpiry: expiry,
         },
       });
 
-      const origin = req.headers.get("origin") || req.nextUrl.origin;
-      await sendPasswordResetEmail(cleanEmail, token, origin);
+      await sendPasswordResetOtpEmail(cleanEmail, otpCode);
     }
 
-    // Always return success for security (prevents user enumeration)
     return NextResponse.json({
       success: true,
       message:
-        "If an account with that email exists, password reset instructions have been sent.",
+        "If an account with that email exists, a 6-digit password reset OTP code has been dispatched.",
     });
   } catch (error: any) {
     console.error("Forgot password error:", error);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { sendEmergencyAlertEmail } from "@/lib/email";
 import { RiskLevel, Role } from "@prisma/client";
 
 export async function GET() {
@@ -53,12 +54,13 @@ export async function POST(req: NextRequest) {
       message ||
       `FLOOD WARNING ALERT (${selectedRisk}): High precipitation level detected. Residents in vulnerable sectors must exercise caution.`;
 
+    // 1. Save alert record in PostgreSQL
     const newAlert = await prisma.alert.create({
       data: {
         districtId: targetDistrictId,
         riskLevel: selectedRisk,
         message: String(alertMessage).trim(),
-        simulated: simulated !== false, // default true unless explicitly real
+        simulated: simulated !== false,
         triggeredById: session.userId,
       },
       include: {
@@ -67,7 +69,37 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, data: newAlert });
+    // 2. Query all registered residents assigned to this district (or all active residents)
+    const targetUsers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { districtId: targetDistrictId },
+          { role: Role.RESIDENT },
+        ],
+        isActive: true,
+      },
+      select: { email: true },
+    });
+
+    const recipientEmails = Array.from(new Set(targetUsers.map((u) => u.email).filter(Boolean)));
+
+    // 3. Send emergency notification emails to all district residents using Nodemailer
+    if (recipientEmails.length > 0) {
+      await sendEmergencyAlertEmail(
+        recipientEmails,
+        newAlert.district.name,
+        newAlert.district.province,
+        selectedRisk,
+        newAlert.message,
+        newAlert.simulated
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: newAlert,
+      notifiedUsersCount: recipientEmails.length,
+    });
   } catch (error: any) {
     console.error("Alert Trigger error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

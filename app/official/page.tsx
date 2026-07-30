@@ -1,36 +1,11 @@
 import React from "react";
 import Link from "next/link";
-import { MapPin, ShieldAlert, UploadCloud, PlusCircle, BrainCircuit, Activity, ChevronRight, Droplets } from "lucide-react";
+import { MapPin, UploadCloud, BrainCircuit, ChevronRight, Droplets } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { RiskLevel } from "@prisma/client";
+import OfficialDashboardChart from "@/components/OfficialDashboardChart";
 
 export default async function OfficialDashboardPage() {
-  const districtsCount = await prisma.district.count();
-
-  const predictions = await prisma.prediction.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    include: { district: { select: { id: true, name: true, province: true } } },
-  });
-
-  // Calculate high risk zones count
-  const latestPredByDistrict = new Map<string, any>();
-  for (const p of predictions) {
-    if (!latestPredByDistrict.has(p.districtId)) {
-      latestPredByDistrict.set(p.districtId, p);
-    }
-  }
-
-  let highRiskCount = 0;
-  for (const p of latestPredByDistrict.values()) {
-    if (p.riskLevel === RiskLevel.HIGH) highRiskCount++;
-  }
-
-  const lastRainfallRecord = await prisma.rainfallRecord.findFirst({
-    orderBy: { createdAt: "desc" },
-    select: { createdAt: true },
-  });
-
   const districts = await prisma.district.findMany({
     include: {
       rainfallRecords: {
@@ -45,6 +20,15 @@ export default async function OfficialDashboardPage() {
     orderBy: { name: "asc" },
   });
 
+  const chartData = districts.map((d) => {
+    const latestRain = d.rainfallRecords[0];
+    return {
+      districtName: d.name,
+      rainfallMm: latestRain ? latestRain.rainfallMm : 0,
+      soilSaturation: latestRain?.soilSaturation ?? 50,
+    };
+  });
+
   const riskBadgeStyles: Record<RiskLevel, string> = {
     LOW: "bg-emerald-100 text-emerald-800 border-emerald-300",
     MEDIUM: "bg-amber-100 text-amber-800 border-amber-300",
@@ -52,7 +36,7 @@ export default async function OfficialDashboardPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="w-full space-y-8">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
@@ -60,7 +44,7 @@ export default async function OfficialDashboardPage() {
             Official Flood Operations Portal
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Real-time telemetry, flood risk forecasting, and public emergency alerting
+            Real-time district telemetry, flood risk forecasting line charts, and disaster operations
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
@@ -81,71 +65,16 @@ export default async function OfficialDashboardPage() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Districts Monitored
-            </p>
-            <h3 className="text-3xl font-extrabold text-slate-900 mt-2">{districtsCount}</h3>
-            <p className="text-xs text-slate-400 mt-1">Across Rwanda provinces</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 text-teal-600 flex items-center justify-center">
-            <MapPin className="w-6 h-6" />
-          </div>
-        </div>
+      {/* Main Real-Time Telemetry Line Chart replacing summary cards */}
+      <OfficialDashboardChart data={chartData} />
 
-        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Current High-Risk Zones
-            </p>
-            <h3 className="text-3xl font-extrabold text-rose-600 mt-2">{highRiskCount}</h3>
-            <p className="text-xs text-rose-500 mt-1 font-medium">Require active surveillance</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center">
-            <ShieldAlert className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Last Telemetry Sync
-            </p>
-            <h3 className="text-lg font-bold text-slate-900 mt-2">
-              {lastRainfallRecord
-                ? new Date(lastRainfallRecord.createdAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : "No data"}
-            </h3>
-            <p className="text-xs text-slate-400 mt-1">Latest telemetry batch</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center">
-            <Activity className="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      {/* District Cards Grid */}
+      {/* District Risk Directory Grid */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <MapPin className="w-5 h-5 text-teal-600" />
-            Monitored District Risk Status
+            Monitored District Directory ({districts.length})
           </h2>
-          <Link
-            href="/official/districts/new"
-            className="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-1"
-          >
-            <PlusCircle className="w-3.5 h-3.5" />
-            <span>Add District</span>
-          </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

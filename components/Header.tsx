@@ -3,7 +3,15 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogOut, User as UserIcon, Menu, X, PanelLeftClose, PanelLeftOpen, CloudRain } from "lucide-react";
+import {
+  LogOut,
+  User as UserIcon,
+  Menu,
+  X,
+  PanelLeftClose,
+  PanelLeftOpen,
+  CloudRain,
+} from "lucide-react";
 import { Role } from "@prisma/client";
 
 interface HeaderProps {
@@ -64,7 +72,11 @@ export default function Header({
             aria-label="Toggle mobile menu"
             className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 shrink-0 cursor-pointer"
           >
-            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {isMobileMenuOpen ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Menu className="w-5 h-5" />
+            )}
           </button>
         )}
 
@@ -89,12 +101,12 @@ export default function Header({
             {isCollapsed ? (
               <>
                 <PanelLeftOpen className="w-4 h-4 text-teal-600" />
-                <span className="hidden lg:inline">Expand Sidebar</span>
+                {/* <span className="hidden lg:inline">Expand Sidebar</span> */}
               </>
             ) : (
               <>
                 <PanelLeftClose className="w-4 h-4 text-slate-500" />
-                <span className="hidden lg:inline">Collapse Sidebar</span>
+                {/* <span className="hidden lg:inline">Collapse Sidebar</span> */}
               </>
             )}
           </button>
@@ -122,7 +134,8 @@ export default function Header({
 
           <span
             className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-              roleBadgeStyles[user.role] || "bg-slate-100 text-slate-700 border-slate-200"
+              roleBadgeStyles[user.role] ||
+              "bg-slate-100 text-slate-700 border-slate-200"
             }`}
           >
             {user.role}
