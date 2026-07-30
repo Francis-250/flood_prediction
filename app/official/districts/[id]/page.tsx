@@ -14,6 +14,10 @@ import {
   Calendar,
   ShieldAlert,
   History,
+  FileText,
+  Save,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -25,6 +29,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { RiskLevel } from "@prisma/client";
+import FormDrawer from "@/components/FormDrawer";
 
 interface DistrictDetail {
   id: string;
@@ -76,22 +81,70 @@ export default function OfficialDistrictDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // FormDrawer State for Manual Rainfall Entry
+  const [isDataDrawerOpen, setIsDataDrawerOpen] = useState(false);
+  const [rainDate, setRainDate] = useState(new Date().toISOString().split("T")[0]);
+  const [rainfallMm, setRainfallMm] = useState("");
+  const [soilSaturation, setSoilSaturation] = useState("65");
+  const [notes, setNotes] = useState("");
+  const [dataSaving, setDataSaving] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
+
+  const fetchDistrict = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/official/districts/${id}`);
+      const data = await res.json();
+      if (data.success && data.data) {
+        setDistrict(data.data);
+      } else {
+        setError(data.error || "District not found");
+      }
+    } catch {
+      setError("Failed to load district details");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetch(`/api/official/districts/${id}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setLoading(false);
-        if (data.success && data.data) {
-          setDistrict(data.data);
-        } else {
-          setError(data.error || "District not found");
-        }
-      })
-      .catch(() => {
-        setLoading(false);
-        setError("Failed to load district details");
-      });
+    fetchDistrict();
   }, [id]);
+
+  const handleAddRainfall = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDataError(null);
+    setDataSaving(true);
+
+    try {
+      const res = await fetch(`/api/official/districts/${id}/data`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: rainDate,
+          rainfallMm: Number(rainfallMm),
+          soilSaturation: soilSaturation ? Number(soilSaturation) : null,
+          notes,
+        }),
+      });
+
+      const resData = await res.json();
+      setDataSaving(false);
+
+      if (!res.ok || !resData.success) {
+        setDataError(resData.error || "Failed to save record");
+        return;
+      }
+
+      setIsDataDrawerOpen(false);
+      setRainfallMm("");
+      setNotes("");
+      fetchDistrict();
+    } catch (err: any) {
+      setDataError("Network error. Please try again.");
+      setDataSaving(false);
+    }
+  };
 
   if (loading) {
     return <div className="p-8 text-center text-slate-500">Loading district telemetry...</div>;
@@ -149,13 +202,13 @@ export default function OfficialDistrictDetailPage({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href={`/official/districts/${district.id}/data/new`}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold shadow-xs transition-colors"
+          <button
+            onClick={() => setIsDataDrawerOpen(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold shadow-xs transition-colors cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
             <span>+ Add Rainfall Data</span>
-          </Link>
+          </button>
           <Link
             href={`/official/alerts/new?districtId=${district.id}`}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold shadow-xs transition-colors"
@@ -293,62 +346,110 @@ export default function OfficialDistrictDetailPage({
         )}
       </div>
 
-      {/* Mini Risk Timeline & Alerts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Risk History Timeline */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-            <History className="w-5 h-5 text-teal-600" />
-            Risk History Timeline
-          </h2>
-          {district.predictions.length === 0 ? (
-            <p className="text-xs text-slate-400">No previous prediction records</p>
-          ) : (
-            <div className="space-y-3">
-              {district.predictions.map((p) => (
-                <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
-                  <div className="flex items-center gap-2.5">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${riskBadgeStyles[p.riskLevel]}`}>
-                      {p.riskLevel}
-                    </span>
-                    <span className="text-xs font-semibold text-slate-700">{p.confidence}% confidence</span>
-                  </div>
-                  <span className="text-xs text-slate-400">
-                    {new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* 100vh Fixed Right Drawer: MANUAL RAINFALL ENTRY */}
+      <FormDrawer
+        isOpen={isDataDrawerOpen}
+        onClose={() => setIsDataDrawerOpen(false)}
+        title={`Add Telemetry for ${district.name}`}
+        subtitle="Input daily precipitation telemetry and soil saturation metrics"
+      >
+        {dataError && (
+          <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-center gap-3 text-rose-800 text-sm font-medium">
+            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+            <span>{dataError}</span>
+          </div>
+        )}
 
-        {/* Recent Alerts Sent */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-            <Bell className="w-5 h-5 text-teal-600" />
-            Sent Emergency Alerts
-          </h2>
-          {district.alerts.length === 0 ? (
-            <p className="text-xs text-slate-400">No alerts issued for this district yet</p>
-          ) : (
-            <div className="space-y-3">
-              {district.alerts.map((a) => (
-                <div key={a.id} className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${riskBadgeStyles[a.riskLevel]}`}>
-                      {a.riskLevel} ALERT
-                    </span>
-                    <span className="text-[11px] text-slate-400">
-                      {new Date(a.sentAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit" })}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-700 leading-snug">{a.message}</p>
-                </div>
-              ))}
+        <form onSubmit={handleAddRainfall} className="space-y-5">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              Telemetry Date
+            </label>
+            <div className="relative">
+              <Calendar className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="date"
+                required
+                value={rainDate}
+                onChange={(e) => setRainDate(e.target.value)}
+                className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
+              />
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              Rainfall Amount (mm) *
+            </label>
+            <div className="relative">
+              <Droplets className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="number"
+                step="0.1"
+                required
+                min={0}
+                value={rainfallMm}
+                onChange={(e) => setRainfallMm(e.target.value)}
+                placeholder="e.g. 75.5"
+                className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              Soil Saturation Estimate (%)
+            </label>
+            <div className="relative">
+              <Gauge className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="number"
+                step="1"
+                min={0}
+                max={100}
+                value={soilSaturation}
+                onChange={(e) => setSoilSaturation(e.target.value)}
+                placeholder="e.g. 80"
+                className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              Field Observations / Notes
+            </label>
+            <div className="relative">
+              <FileText className="w-5 h-5 text-slate-400 absolute left-3.5 top-3" />
+              <textarea
+                rows={3}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="e.g. Continuous heavy downpour since morning."
+                className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setIsDataDrawerOpen(false)}
+              className="px-4 py-2.5 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-100 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={dataSaving}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" />
+              <span>{dataSaving ? "Saving..." : "Save Telemetry Data"}</span>
+            </button>
+          </div>
+        </form>
+      </FormDrawer>
     </div>
   );
 }

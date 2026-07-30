@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     if (!name || !email || !password) {
       return NextResponse.json(
         { success: false, error: "Name, email, and password are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -26,8 +26,11 @@ export async function POST(req: NextRequest) {
 
     if (existing) {
       return NextResponse.json(
-        { success: false, error: "An account with this email address already exists" },
-        { status: 400 }
+        {
+          success: false,
+          error: "An account with this email address already exists",
+        },
+        { status: 400 },
       );
     }
 
@@ -64,7 +67,7 @@ export async function POST(req: NextRequest) {
     console.error("Registration error:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Failed to register user" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { BrainCircuit, MapPin, Droplets, Calendar, Mountain, Gauge, Sparkles, AlertCircle, ShieldAlert } from "lucide-react";
+import { BrainCircuit, MapPin, Droplets, Calendar, Mountain, Gauge, Sparkles, AlertCircle, SlidersHorizontal } from "lucide-react";
 import { RiskLevel } from "@prisma/client";
+import FormDrawer from "@/components/FormDrawer";
 
 interface DistrictItem {
   id: string;
@@ -27,6 +28,7 @@ export default function OfficialPredictPage() {
   const [soilSaturation, setSoilSaturation] = useState("75");
   const [elevation, setElevation] = useState("1800");
 
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PredictionResult | null>(null);
@@ -86,6 +88,7 @@ export default function OfficialPredictPage() {
       }
 
       setResult(data.data);
+      setIsDrawerOpen(false);
     } catch (err: any) {
       setError("Network error calling prediction API.");
       setLoading(false);
@@ -104,17 +107,145 @@ export default function OfficialPredictPage() {
     HIGH: "bg-rose-600 text-white animate-pulse",
   };
 
+  const FormFields = (
+    <form onSubmit={handlePredict} className="space-y-4">
+      <div>
+        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+          Target District
+        </label>
+        <div className="relative">
+          <MapPin className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <select
+            value={selectedDistrictId}
+            onChange={(e) => handleDistrictChange(e.target.value)}
+            className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm bg-white"
+          >
+            <option value="">Select District</option>
+            {districts.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name} ({d.province} Province)
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            Rainfall Amount (mm)
+          </label>
+          <div className="relative">
+            <Droplets className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="number"
+              step="0.1"
+              required
+              value={rainfallMm}
+              onChange={(e) => setRainfallMm(e.target.value)}
+              className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            Continuous Days of Rain
+          </label>
+          <div className="relative">
+            <Calendar className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="number"
+              min={1}
+              required
+              value={daysOfRain}
+              onChange={(e) => setDaysOfRain(e.target.value)}
+              className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            Terrain Slope (° Degrees)
+          </label>
+          <div className="relative">
+            <Mountain className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="number"
+              step="0.1"
+              required
+              value={slope}
+              onChange={(e) => setSlope(e.target.value)}
+              className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            Soil Saturation (%)
+          </label>
+          <div className="relative">
+            <Gauge className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="number"
+              min={0}
+              max={100}
+              required
+              value={soilSaturation}
+              onChange={(e) => setSoilSaturation(e.target.value)}
+              className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+          Mean Elevation (Meters)
+        </label>
+        <input
+          type="number"
+          value={elevation}
+          onChange={(e) => setElevation(e.target.value)}
+          className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full py-3 px-4 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
+      >
+        <Sparkles className="w-4 h-4" />
+        <span>{loading ? "Analyzing Hydrological Parameters..." : "Run AI Flood Risk Classification"}</span>
+      </button>
+    </form>
+  );
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Header */}
-      <div className="border-b border-slate-200 pb-5">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-          <BrainCircuit className="w-6 h-6 text-teal-600" />
-          AI Flood Risk Simulation & Forecasting
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Input meteorological and topographical metrics to generate instant Groq LLM flood risk evaluations
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <BrainCircuit className="w-6 h-6 text-teal-600" />
+            AI Flood Risk Simulation & Forecasting
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Input meteorological and topographical metrics to generate instant Groq LLM flood risk evaluations
+          </p>
+        </div>
+        <button
+          onClick={() => setIsDrawerOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold shadow-xs transition-colors cursor-pointer"
+        >
+          <SlidersHorizontal className="w-4 h-4 text-teal-400" />
+          <span>Open Parameters Drawer</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -131,122 +262,7 @@ export default function OfficialPredictPage() {
             </div>
           )}
 
-          <form onSubmit={handlePredict} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                Target District
-              </label>
-              <div className="relative">
-                <MapPin className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <select
-                  value={selectedDistrictId}
-                  onChange={(e) => handleDistrictChange(e.target.value)}
-                  className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm bg-white"
-                >
-                  <option value="">Select District</option>
-                  {districts.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} ({d.province} Province)
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Rainfall Amount (mm)
-                </label>
-                <div className="relative">
-                  <Droplets className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="number"
-                    step="0.1"
-                    required
-                    value={rainfallMm}
-                    onChange={(e) => setRainfallMm(e.target.value)}
-                    className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Continuous Days of Rain
-                </label>
-                <div className="relative">
-                  <Calendar className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="number"
-                    min={1}
-                    required
-                    value={daysOfRain}
-                    onChange={(e) => setDaysOfRain(e.target.value)}
-                    className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Terrain Slope (° Degrees)
-                </label>
-                <div className="relative">
-                  <Mountain className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="number"
-                    step="0.1"
-                    required
-                    value={slope}
-                    onChange={(e) => setSlope(e.target.value)}
-                    className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Soil Saturation (%)
-                </label>
-                <div className="relative">
-                  <Gauge className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    required
-                    value={soilSaturation}
-                    onChange={(e) => setSoilSaturation(e.target.value)}
-                    className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                Mean Elevation (Meters)
-              </label>
-              <input
-                type="number"
-                value={elevation}
-                onChange={(e) => setElevation(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 px-4 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>{loading ? "Analyzing Hydrological Parameters..." : "Run AI Flood Risk Classification"}</span>
-            </button>
-          </form>
+          {FormFields}
         </div>
 
         {/* Prediction Results Panel */}
@@ -281,12 +297,22 @@ export default function OfficialPredictPage() {
               <div className="p-8 text-center text-slate-400 space-y-2">
                 <BrainCircuit className="w-10 h-10 text-slate-300 mx-auto" />
                 <p className="text-sm font-medium text-slate-600">No prediction executed yet</p>
-                <p className="text-xs text-slate-400">Fill in parameters on the left and click &quot;Run AI Flood Risk Classification&quot;.</p>
+                <p className="text-xs text-slate-400">Fill in parameters and click &quot;Run AI Flood Risk Classification&quot;.</p>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* 100vh Fixed Right Drawer: AI PARAMETERS */}
+      <FormDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        title="Configure AI Scenario Parameters"
+        subtitle="Set meteorological and terrain inputs for Groq flood forecasting"
+      >
+        {FormFields}
+      </FormDrawer>
     </div>
   );
 }

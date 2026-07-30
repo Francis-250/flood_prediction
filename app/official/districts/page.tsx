@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { MapPin, PlusCircle, Search, Filter, ChevronRight, Droplets, Activity } from "lucide-react";
+import { MapPin, PlusCircle, Search, Filter, ChevronRight, Droplets, Mountain, Globe, AlertCircle, Plus } from "lucide-react";
 import { RiskLevel } from "@prisma/client";
+import { getProvincesWithDistricts, getDistrictInfo } from "@/lib/location";
+import FormDrawer from "@/components/FormDrawer";
 
 interface DistrictItem {
   id: string;
@@ -18,22 +20,95 @@ interface DistrictItem {
 }
 
 export default function OfficialDistrictsPage() {
+  const provincesWithDistricts = getProvincesWithDistricts();
+
   const [districts, setDistricts] = useState<DistrictItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [riskFilter, setRiskFilter] = useState("");
 
+  // Drawer state for Add District
+  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+  const [selectedProvince, setSelectedProvince] = useState(provincesWithDistricts[0]?.province || "");
+  const [selectedDistrictName, setSelectedDistrictName] = useState("");
+  const [elevation, setElevation] = useState("1800");
+  const [slope, setSlope] = useState("16");
+  const [latitude, setLatitude] = useState("-1.60");
+  const [longitude, setLongitude] = useState("29.60");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchDistricts = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/official/districts");
+      const data = await res.json();
+      if (data.success) {
+        setDistricts(data.data);
+      }
+    } catch (err) {
+      console.error("Failed to load districts", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetch("/api/official/districts")
-      .then((res) => res.json())
-      .then((data) => {
-        setLoading(false);
-        if (data.success) {
-          setDistricts(data.data);
-        }
-      })
-      .catch(() => setLoading(false));
+    fetchDistricts();
   }, []);
+
+  const districtsForProvince =
+    provincesWithDistricts.find((p) => p.province === selectedProvince)?.districts || [];
+
+  const handleDistrictChange = (name: string) => {
+    setSelectedDistrictName(name);
+    const info = getDistrictInfo(name);
+    if (info) {
+      setSelectedProvince(info.province);
+    }
+  };
+
+  const handleAddDistrict = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!selectedDistrictName) {
+      setError("Please select a district name from Rwanda's administrative list.");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const res = await fetch("/api/official/districts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: selectedDistrictName,
+          province: selectedProvince,
+          elevation: Number(elevation),
+          slope: Number(slope),
+          latitude: latitude ? Number(latitude) : null,
+          longitude: longitude ? Number(longitude) : null,
+        }),
+      });
+
+      const data = await res.json();
+      setSaving(false);
+
+      if (!res.ok || !data.success) {
+        setError(data.error || "Failed to create district");
+        return;
+      }
+
+      setIsAddDrawerOpen(false);
+      setSelectedDistrictName("");
+      fetchDistricts();
+    } catch (err: any) {
+      setError("Network error. Please try again.");
+      setSaving(false);
+    }
+  };
 
   const filtered = districts.filter((d) => {
     const matchesSearch =
@@ -61,13 +136,13 @@ export default function OfficialDistrictsPage() {
             View all administrative districts, topographical attributes, and flood risk status
           </p>
         </div>
-        <Link
-          href="/official/districts/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm shadow-xs transition-colors"
+        <button
+          onClick={() => setIsAddDrawerOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm shadow-xs transition-colors cursor-pointer"
         >
           <PlusCircle className="w-4 h-4" />
           <span>Add New District</span>
-        </Link>
+        </button>
       </div>
 
       {/* Filters Bar */}
@@ -147,12 +222,6 @@ export default function OfficialDistrictsPage() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-3">
                         <Link
-                          href={`/official/districts/${d.id}/data/new`}
-                          className="text-xs font-semibold text-slate-600 hover:text-teal-600"
-                        >
-                          + Add Rain Data
-                        </Link>
-                        <Link
                           href={`/official/districts/${d.id}`}
                           className="inline-flex items-center gap-1 text-xs font-semibold text-teal-600 hover:text-teal-800 hover:underline"
                         >
@@ -168,6 +237,150 @@ export default function OfficialDistrictsPage() {
           </div>
         )}
       </div>
+
+      {/* 100vh Fixed Right Drawer: ADD DISTRICT */}
+      <FormDrawer
+        isOpen={isAddDrawerOpen}
+        onClose={() => setIsAddDrawerOpen(false)}
+        title="Add Monitored District"
+        subtitle="Register an official Rwanda administrative district"
+      >
+        {error && (
+          <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-center gap-3 text-rose-800 text-sm font-medium">
+            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleAddDistrict} className="space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                Province
+              </label>
+              <select
+                value={selectedProvince}
+                onChange={(e) => {
+                  setSelectedProvince(e.target.value);
+                  setSelectedDistrictName("");
+                }}
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm bg-white"
+              >
+                {provincesWithDistricts.map((p) => (
+                  <option key={p.province} value={p.province}>
+                    {p.province} Province
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                District Name *
+              </label>
+              <select
+                required
+                value={selectedDistrictName}
+                onChange={(e) => handleDistrictChange(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm bg-white"
+              >
+                <option value="">Select District</option>
+                {districtsForProvince.map((dName) => (
+                  <option key={dName} value={dName}>
+                    {dName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                Mean Elevation (Meters)
+              </label>
+              <div className="relative">
+                <Mountain className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="number"
+                  value={elevation}
+                  onChange={(e) => setElevation(e.target.value)}
+                  placeholder="e.g. 1850"
+                  className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                Average Terrain Slope (Degrees °)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                value={slope}
+                onChange={(e) => setSlope(e.target.value)}
+                placeholder="e.g. 18.5"
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                Latitude Coordinate
+              </label>
+              <div className="relative">
+                <Globe className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={latitude}
+                  onChange={(e) => setLatitude(e.target.value)}
+                  placeholder="-1.6500"
+                  className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                Longitude Coordinate
+              </label>
+              <div className="relative">
+                <Globe className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={longitude}
+                  onChange={(e) => setLongitude(e.target.value)}
+                  placeholder="29.5000"
+                  className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setIsAddDrawerOpen(false)}
+              className="px-4 py-2.5 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-100 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{saving ? "Creating..." : "Save District"}</span>
+            </button>
+          </div>
+        </form>
+      </FormDrawer>
     </div>
   );
 }
