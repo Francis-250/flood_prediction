@@ -61,9 +61,8 @@ export default function Sidebar({
   ];
 
   const officialNav: NavItem[] = [
-    { label: "Dashboard", href: "/official", icon: LayoutDashboard, exact: true },
-    { label: "Districts", href: "/official/districts", icon: MapPin, exact: true },
-    { label: "Add District", href: "/official/districts/new", icon: PlusCircle },
+    { label: "Dashboard", href: "/official", exact: true, icon: LayoutDashboard },
+    { label: "Districts", href: "/official/districts", exact: true, icon: MapPin },
     { label: "Upload Dataset", href: "/official/districts/upload", icon: UploadCloud },
     { label: "Alerts", href: "/official/alerts", icon: Bell },
     { label: "Run Prediction", href: "/official/predict", icon: BrainCircuit },
