@@ -2,19 +2,14 @@ import React from "react";
 import Link from "next/link";
 import {
   CloudRain,
-  ShieldAlert,
-  BrainCircuit,
   MapPin,
-  UploadCloud,
   Bell,
   Users,
   ArrowRight,
   CheckCircle2,
   Activity,
   Droplets,
-  Mountain,
-  Gauge,
-  ChevronRight,
+  BrainCircuit,
   UserCheck,
   ShieldCheck,
 } from "lucide-react";
@@ -52,41 +47,41 @@ export default async function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-teal-500 selection:text-white flex flex-col">
+    <div className="min-h-screen bg-slate-100 text-slate-900 font-sans flex flex-col">
       {/* Top Banner if logged in */}
       {session && (
-        <div className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white text-xs font-semibold px-4 py-2.5 text-center flex items-center justify-center gap-2">
+        <div className="bg-teal-700 text-white text-xs font-semibold px-4 py-2 text-center flex items-center justify-center gap-2 border-b border-teal-800">
           <span>Signed in as <strong>{session.name}</strong> ({session.role})</span>
           <Link
             href={userDashboardUrl}
-            className="underline hover:text-slate-100 ml-2 font-bold inline-flex items-center gap-1"
+            className="underline hover:text-teal-100 ml-2 font-bold inline-flex items-center gap-1"
           >
-            Go to your Portal Dashboard <ArrowRight className="w-3.5 h-3.5" />
+            Go to Portal Dashboard <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
       )}
 
-      {/* Navigation Header */}
-      <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-6 lg:px-12 h-20 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center text-white shadow-md shadow-teal-500/20 group-hover:scale-105 transition-transform">
-            <CloudRain className="w-6 h-6" />
+      {/* Navigation Header matching portal style */}
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white px-6 lg:px-12 h-16 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-teal-600 flex items-center justify-center text-white">
+            <CloudRain className="w-5 h-5" />
           </div>
           <div>
-            <span className="font-extrabold text-white text-lg tracking-tight block">
+            <span className="font-bold text-slate-900 text-base tracking-tight block">
               Rwanda Flood Guard
             </span>
-            <span className="text-[10px] text-teal-400 font-bold uppercase tracking-wider block">
-              National AI Flood Prediction Platform
+            <span className="text-[10px] text-teal-700 font-bold uppercase tracking-wider block">
+              National Flood Prediction Platform
             </span>
           </div>
         </Link>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {session ? (
             <Link
               href={userDashboardUrl}
-              className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm shadow-lg shadow-teal-600/30 transition-all flex items-center gap-2"
+              className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm transition-colors flex items-center gap-2"
             >
               <span>Go to Portal</span>
               <ArrowRight className="w-4 h-4" />
@@ -95,13 +90,13 @@ export default async function LandingPage() {
             <>
               <Link
                 href="/auth/login"
-                className="px-4 py-2 rounded-lg text-slate-300 hover:text-white text-sm font-semibold transition-colors"
+                className="px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-200 text-sm font-semibold transition-colors border border-slate-300 bg-white"
               >
                 Sign In
               </Link>
               <Link
                 href="/auth/register"
-                className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm shadow-lg shadow-teal-600/30 transition-all flex items-center gap-2"
+                className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm transition-colors flex items-center gap-2"
               >
                 <span>Register Account</span>
                 <ArrowRight className="w-4 h-4" />
@@ -111,75 +106,70 @@ export default async function LandingPage() {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative pt-16 pb-24 px-6 lg:px-12 max-w-7xl mx-auto text-center space-y-8">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-teal-950/80 border border-teal-800/60 text-teal-300 text-xs font-semibold tracking-wide">
-          <ShieldAlert className="w-4 h-4 text-teal-400" />
-          <span>National Early Warning & Hydrological Risk Platform</span>
-        </div>
-
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight max-w-4xl mx-auto leading-tight">
-          AI-Powered Flood Risk Forecasting for <span className="bg-gradient-to-r from-teal-400 via-cyan-400 to-blue-500 bg-clip-text text-transparent">Rwanda</span>
+      {/* Hero Section - Clean Corporate Style (No gradients, no shadows, no top badge) */}
+      <section className="pt-16 pb-20 px-6 lg:px-12 max-w-6xl mx-auto text-center space-y-6">
+        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight max-w-4xl mx-auto">
+          Flood Risk Forecasting & Early Warning System for Rwanda
         </h1>
 
-        <p className="text-base sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
-          Integrating Groq LLM intelligence with meteorological rainfall telemetry, soil saturation estimates, and topographical slope models across all administrative districts.
+        <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed font-normal">
+          Integrating Groq AI intelligence with meteorological rainfall telemetry, soil saturation estimates, and topographical slope models across all administrative districts.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
           <Link
             href={session ? userDashboardUrl : "/auth/register"}
-            className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white font-bold text-base shadow-xl shadow-teal-600/25 transition-all flex items-center justify-center gap-2 group"
+            className="w-full sm:w-auto px-6 py-3 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2"
           >
-            <span>{session ? "Enter Your Dashboard" : "Get Started - Register Portal"}</span>
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            <span>{session ? "Enter Your Dashboard" : "Register Account"}</span>
+            <ArrowRight className="w-4 h-4" />
           </Link>
           <Link
             href="/auth/login"
-            className="w-full sm:w-auto px-8 py-4 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-800 text-slate-200 font-bold text-base transition-colors"
+            className="w-full sm:w-auto px-6 py-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm transition-colors"
           >
-            Sign In with Existing Account
+            Sign In to Portal
           </Link>
         </div>
 
         {/* Platform Stat Highlights */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-12 max-w-4xl mx-auto text-left">
-          <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-800 backdrop-blur-xs">
-            <MapPin className="w-6 h-6 text-teal-400 mb-2" />
-            <div className="text-2xl font-black text-white">{totalDistricts || 30}</div>
-            <div className="text-xs text-slate-400 font-semibold uppercase mt-0.5">Districts Monitored</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-10 text-left">
+          <div className="p-5 rounded-xl bg-white border border-slate-200">
+            <MapPin className="w-5 h-5 text-teal-600 mb-2" />
+            <div className="text-2xl font-bold text-slate-900">{totalDistricts || 30}</div>
+            <div className="text-xs text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Districts Monitored</div>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-800 backdrop-blur-xs">
-            <BrainCircuit className="w-6 h-6 text-cyan-400 mb-2" />
-            <div className="text-2xl font-black text-white">Groq LLM</div>
-            <div className="text-xs text-slate-400 font-semibold uppercase mt-0.5">AI Prediction Engine</div>
+          <div className="p-5 rounded-xl bg-white border border-slate-200">
+            <BrainCircuit className="w-5 h-5 text-teal-600 mb-2" />
+            <div className="text-2xl font-bold text-slate-900">Groq LLM</div>
+            <div className="text-xs text-slate-500 font-semibold uppercase tracking-wider mt-0.5">AI Prediction Engine</div>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-800 backdrop-blur-xs">
-            <Activity className="w-6 h-6 text-blue-400 mb-2" />
-            <div className="text-2xl font-black text-white">24/7 Sync</div>
-            <div className="text-xs text-slate-400 font-semibold uppercase mt-0.5">Precipitation Telemetry</div>
+          <div className="p-5 rounded-xl bg-white border border-slate-200">
+            <Activity className="w-5 h-5 text-teal-600 mb-2" />
+            <div className="text-2xl font-bold text-slate-900">24/7 Sync</div>
+            <div className="text-xs text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Telemetry Ingestion</div>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-800 backdrop-blur-xs">
-            <Bell className="w-6 h-6 text-rose-400 mb-2" />
-            <div className="text-2xl font-black text-white">{totalAlerts || 12}</div>
-            <div className="text-xs text-slate-400 font-semibold uppercase mt-0.5">Dispatched Warnings</div>
+          <div className="p-5 rounded-xl bg-white border border-slate-200">
+            <Bell className="w-5 h-5 text-rose-600 mb-2" />
+            <div className="text-2xl font-bold text-slate-900">{totalAlerts || 12}</div>
+            <div className="text-xs text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Dispatched Warnings</div>
           </div>
         </div>
       </section>
 
       {/* Live Monitored Districts Preview Section */}
-      <section className="bg-slate-950 py-20 px-6 lg:px-12 border-t border-b border-slate-800">
-        <div className="max-w-7xl mx-auto space-y-12">
-          <div className="text-center space-y-3">
-            <h2 className="text-3xl font-extrabold text-white tracking-tight">
-              Live District Flood Risk Status
+      <section className="bg-white py-16 px-6 lg:px-12 border-t border-b border-slate-200">
+        <div className="max-w-6xl mx-auto space-y-8">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+              Live District Risk Status Directory
             </h2>
-            <p className="text-sm text-slate-400 max-w-xl mx-auto">
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
               Real-time classification based on terrain elevation, slope gradient, and rainfall accumulation
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {previewDistricts.map((d) => {
               const latestPred = d.predictions[0];
               const latestRain = d.rainfallRecords[0];
@@ -192,31 +182,31 @@ export default async function LandingPage() {
               return (
                 <div
                   key={d.id}
-                  className="bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-4 hover:border-teal-500/50 transition-all shadow-lg"
+                  className="bg-slate-50 rounded-xl border border-slate-200 p-5 space-y-3"
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="text-lg font-bold text-white">{d.name}</h3>
-                      <p className="text-xs text-slate-400">{d.province} Province</p>
+                      <h3 className="text-base font-bold text-slate-900">{d.name}</h3>
+                      <p className="text-xs text-slate-500">{d.province} Province</p>
                     </div>
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-bold border ${riskBadgeStyles[risk]}`}
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${riskBadgeStyles[risk]}`}
                     >
                       {risk} RISK
                     </span>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-800/80 grid grid-cols-2 gap-3 text-xs">
-                    <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                  <div className="pt-3 border-t border-slate-200 grid grid-cols-2 gap-3 text-xs">
+                    <div className="bg-white p-2.5 rounded-lg border border-slate-200">
                       <span className="text-slate-500 block">Rainfall</span>
-                      <span className="font-semibold text-cyan-400 flex items-center gap-1 mt-0.5">
-                        <Droplets className="w-3.5 h-3.5" />
+                      <span className="font-semibold text-blue-700 flex items-center gap-1 mt-0.5">
+                        <Droplets className="w-3.5 h-3.5 text-blue-500" />
                         {latestRain ? `${latestRain.rainfallMm} mm` : "N/A"}
                       </span>
                     </div>
-                    <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                    <div className="bg-white p-2.5 rounded-lg border border-slate-200">
                       <span className="text-slate-500 block">Elevation / Slope</span>
-                      <span className="font-semibold text-slate-300 mt-0.5 block">
+                      <span className="font-semibold text-slate-800 mt-0.5 block">
                         {d.elevation ? `${d.elevation}m` : "N/A"} | {d.slope ? `${d.slope}°` : "N/A"}
                       </span>
                     </div>
@@ -229,88 +219,88 @@ export default async function LandingPage() {
       </section>
 
       {/* Role Portal Showcase Section */}
-      <section className="py-20 px-6 lg:px-12 max-w-7xl mx-auto space-y-12">
-        <div className="text-center space-y-3">
-          <h2 className="text-3xl font-extrabold text-white tracking-tight">
-            Role-Based Access Control Architecture
+      <section className="py-16 px-6 lg:px-12 max-w-6xl mx-auto space-y-8">
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+            Role-Based System Access
           </h2>
-          <p className="text-sm text-slate-400 max-w-xl mx-auto">
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
             Tailored workflows for government officials, local residents, and system administrators
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Government Officials */}
-          <div className="bg-slate-800/50 rounded-2xl border border-slate-700/80 p-8 space-y-5">
-            <div className="w-12 h-12 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center">
-              <UserCheck className="w-6 h-6" />
+          <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+            <div className="w-10 h-10 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center font-bold">
+              <UserCheck className="w-5 h-5" />
             </div>
-            <h3 className="text-xl font-bold text-white">Government Officials</h3>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Full district monitoring controls: upload bulk telemetry datasets via Excel/CSV, run AI flood predictions, and trigger emergency warning alerts.
+            <h3 className="text-lg font-bold text-slate-900">Government Officials</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              District monitoring controls: bulk file telemetry dataset upload, AI flood predictions, and emergency warning alert dispatch.
             </p>
-            <ul className="space-y-2 text-xs text-slate-400 pt-2 border-t border-slate-700/60">
+            <ul className="space-y-2 text-xs text-slate-500 pt-2 border-t border-slate-100">
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-teal-400" />
+                <CheckCircle2 className="w-4 h-4 text-teal-600" />
                 <span>Bulk CSV/Excel dataset ingestion</span>
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-teal-400" />
-                <span>Run Groq AI hydrological simulations</span>
+                <CheckCircle2 className="w-4 h-4 text-teal-600" />
+                <span>Groq AI hydrological simulations</span>
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-teal-400" />
-                <span>Broadcast emergency district alerts</span>
+                <CheckCircle2 className="w-4 h-4 text-teal-600" />
+                <span>Emergency warnings dispatch</span>
               </li>
             </ul>
           </div>
 
           {/* Local Residents */}
-          <div className="bg-slate-800/50 rounded-2xl border border-slate-700/80 p-8 space-y-5">
-            <div className="w-12 h-12 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
-              <Users className="w-6 h-6" />
+          <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+            <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+              <Users className="w-5 h-5" />
             </div>
-            <h3 className="text-xl font-bold text-white">Local Residents</h3>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Read-only safety portal tailored to their assigned district. View current flood risk badges, tailored action guidelines, and emergency alerts.
+            <h3 className="text-lg font-bold text-slate-900">Local Residents</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Safety portal tailored to their home district: current flood risk status, safety action guidelines, and emergency inbox.
             </p>
-            <ul className="space-y-2 text-xs text-slate-400 pt-2 border-t border-slate-700/60">
+            <ul className="space-y-2 text-xs text-slate-500 pt-2 border-t border-slate-100">
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400" />
-                <span>Single-card assigned district status</span>
+                <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                <span>Single-card home district status</span>
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400" />
-                <span>Clear safety and evacuation guidelines</span>
+                <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                <span>Clear safety and evacuation steps</span>
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400" />
-                <span>Instant broadcast alert inbox</span>
+                <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                <span>Travel & district warnings inbox</span>
               </li>
             </ul>
           </div>
 
           {/* System Administrators */}
-          <div className="bg-slate-800/50 rounded-2xl border border-slate-700/80 p-8 space-y-5">
-            <div className="w-12 h-12 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
-              <ShieldCheck className="w-6 h-6" />
+          <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+            <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+              <ShieldCheck className="w-5 h-5" />
             </div>
-            <h3 className="text-xl font-bold text-white">System Administrators</h3>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Comprehensive user management: create, edit, activate or deactivate accounts, assign role permissions, and manage platform parameters.
+            <h3 className="text-lg font-bold text-slate-900">System Administrators</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              User management: create, edit, activate or deactivate accounts, assign role permissions, and configure system thresholds.
             </p>
-            <ul className="space-y-2 text-xs text-slate-400 pt-2 border-t border-slate-700/60">
+            <ul className="space-y-2 text-xs text-slate-500 pt-2 border-t border-slate-100">
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-purple-400" />
+                <CheckCircle2 className="w-4 h-4 text-purple-600" />
                 <span>User creation & role management</span>
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-purple-400" />
+                <CheckCircle2 className="w-4 h-4 text-purple-600" />
                 <span>Account activation / deactivation</span>
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-purple-400" />
-                <span>Platform settings & AI thresholds</span>
+                <CheckCircle2 className="w-4 h-4 text-purple-600" />
+                <span>Platform parameters & thresholds</span>
               </li>
             </ul>
           </div>
@@ -318,22 +308,22 @@ export default async function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-slate-800 bg-slate-950 py-10 px-6 lg:px-12">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-500">
-          <div className="flex items-center gap-3">
-            <CloudRain className="w-5 h-5 text-teal-500" />
-            <span className="font-bold text-slate-300">Rwanda Flood Guard &copy; 2026</span>
+      <footer className="mt-auto border-t border-slate-200 bg-white py-8 px-6 lg:px-12">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <div className="flex items-center gap-2">
+            <CloudRain className="w-4 h-4 text-teal-600" />
+            <span className="font-bold text-slate-800">Rwanda Flood Guard &copy; 2026</span>
             <span>- All Rights Reserved</span>
           </div>
 
-          <div className="flex items-center gap-6">
-            <Link href="/auth/login" className="hover:text-teal-400 transition-colors">
+          <div className="flex items-center gap-5">
+            <Link href="/auth/login" className="hover:text-teal-600 transition-colors font-medium">
               Sign In
             </Link>
-            <Link href="/auth/register" className="hover:text-teal-400 transition-colors">
+            <Link href="/auth/register" className="hover:text-teal-600 transition-colors font-medium">
               Register
             </Link>
-            <span className="text-slate-600">Disaster Resilience Telemetry</span>
+            <span className="text-slate-400">Flood Telemetry & AI Prediction</span>
           </div>
         </div>
       </footer>

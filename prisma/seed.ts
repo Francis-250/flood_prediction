@@ -1,6 +1,10 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+dotenv.config();
+
 import { PrismaClient, Role, RiskLevel, DataSource } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 import { hashPassword } from "../lib/password";
 import rawData from "../lib/data.json";
 
@@ -9,12 +13,16 @@ if (!connectionString) {
   throw new Error("DATABASE_URL is required");
 }
 
-const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString }),
+const pool = new Pool({
+  connectionString,
+  ssl: { rejectUnauthorized: false },
 });
 
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
+
 async function main() {
-  console.log("Seeding database...");
+  console.log("Seeding Neon database at:", connectionString?.split("@")[1] || "Neon Host");
 
   // 1. Create Districts
   const districtConfigs = [
@@ -32,134 +40,132 @@ async function main() {
 
   const districtMap = new Map<string, string>();
 
-  for (const item of districtConfigs) {
-    const district = await prisma.district.upsert({
-      where: { name: item.name },
-      update: {
-        province: item.province,
-        elevation: item.elevation,
-        slope: item.slope,
-        latitude: item.lat,
-        longitude: item.lng,
-      },
-      create: {
-        name: item.name,
-        province: item.province,
-        elevation: item.elevation,
-        slope: item.slope,
-        latitude: item.lat,
-        longitude: item.lng,
-      },
-    });
+  await Promise.all(
+    districtConfigs.map(async (item) => {
+      const district = await prisma.district.upsert({
+        where: { name: item.name },
+        update: {
+          province: item.province,
+          elevation: item.elevation,
+          slope: item.slope,
+          latitude: item.lat,
+          longitude: item.lng,
+        },
+        create: {
+          name: item.name,
+          province: item.province,
+          elevation: item.elevation,
+          slope: item.slope,
+          latitude: item.lat,
+          longitude: item.lng,
+        },
+      });
 
-    districtMap.set(item.name, district.id);
+      districtMap.set(item.name, district.id);
 
-    // Extract cells from data.json for this district
-    const dataAny = rawData as any;
-    if (dataAny[item.province] && dataAny[item.province][item.name]) {
-      const sectorsObj = dataAny[item.province][item.name];
-      const cellSet = new Set<string>();
-      for (const sectorName of Object.keys(sectorsObj)) {
-        const cells = sectorsObj[sectorName];
-        if (cells) {
-          for (const cellName of Object.keys(cells)) {
-            cellSet.add(cellName);
+      const dataAny = rawData as any;
+      if (dataAny[item.province] && dataAny[item.province][item.name]) {
+        const sectorsObj = dataAny[item.province][item.name];
+        const cellSet = new Set<string>();
+        for (const sectorName of Object.keys(sectorsObj)) {
+          const cells = sectorsObj[sectorName];
+          if (cells) {
+            for (const cellName of Object.keys(cells)) {
+              cellSet.add(cellName);
+            }
           }
         }
-      }
 
-      // Add top 5 cells for demo
-      const topCells = Array.from(cellSet).slice(0, 5);
-      for (const cellName of topCells) {
-        await prisma.cell.upsert({
-          where: {
-            districtId_name: {
-              districtId: district.id,
-              name: cellName,
-            },
-          },
-          update: {},
-          create: {
-            districtId: district.id,
-            name: cellName,
-          },
-        });
+        const topCells = Array.from(cellSet).slice(0, 3);
+        await Promise.all(
+          topCells.map((cellName) =>
+            prisma.cell.upsert({
+              where: {
+                districtId_name: {
+                  districtId: district.id,
+                  name: cellName,
+                },
+              },
+              update: {},
+              create: {
+                districtId: district.id,
+                name: cellName,
+              },
+            })
+          )
+        );
       }
-    }
-  }
+    })
+  );
 
   // 2. Create Users
   const defaultPasswordHash = await hashPassword("password123");
-
   const nyabihuId = districtMap.get("Nyabihu");
 
-  // Admin user
-  const adminUser = await prisma.user.upsert({
-    where: { email: "admin@floodguard.rw" },
-    update: { isActive: true, isVerified: true },
-    create: {
-      name: "System Administrator",
-      email: "admin@floodguard.rw",
-      password: defaultPasswordHash,
-      role: Role.ADMIN,
-      isActive: true,
-      isVerified: true,
-    },
-  });
+  const [adminUser, officialUser] = await Promise.all([
+    prisma.user.upsert({
+      where: { email: "admin@floodguard.rw" },
+      update: { isActive: true, isVerified: true },
+      create: {
+        name: "System Administrator",
+        email: "admin@floodguard.rw",
+        password: defaultPasswordHash,
+        role: Role.ADMIN,
+        isActive: true,
+        isVerified: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "official@floodguard.rw" },
+      update: { isActive: true, isVerified: true, districtId: nyabihuId },
+      create: {
+        name: "Official - Nyabihu",
+        email: "official@floodguard.rw",
+        password: defaultPasswordHash,
+        role: Role.OFFICIAL,
+        districtId: nyabihuId,
+        isActive: true,
+        isVerified: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "resident@floodguard.rw" },
+      update: { isActive: true, isVerified: true, districtId: nyabihuId },
+      create: {
+        name: "Resident - Nyabihu",
+        email: "resident@floodguard.rw",
+        password: defaultPasswordHash,
+        role: Role.RESIDENT,
+        districtId: nyabihuId,
+        isActive: true,
+        isVerified: true,
+      },
+    }),
+  ]);
 
-  // Official user
-  const officialUser = await prisma.user.upsert({
-    where: { email: "official@floodguard.rw" },
-    update: { isActive: true, isVerified: true, districtId: nyabihuId },
-    create: {
-      name: "Official - Nyabihu",
-      email: "official@floodguard.rw",
-      password: defaultPasswordHash,
-      role: Role.OFFICIAL,
-      districtId: nyabihuId,
-      isActive: true,
-      isVerified: true,
-    },
-  });
-
-  // Resident user
-  await prisma.user.upsert({
-    where: { email: "resident@floodguard.rw" },
-    update: { isActive: true, isVerified: true, districtId: nyabihuId },
-    create: {
-      name: "Resident - Nyabihu",
-      email: "resident@floodguard.rw",
-      password: defaultPasswordHash,
-      role: Role.RESIDENT,
-      districtId: nyabihuId,
-      isActive: true,
-      isVerified: true,
-    },
-  });
-
-  // 3. Create Rainfall Records (Last 14 days for Nyabihu, Musanze, Rubavu)
+  // 3. Create Rainfall Records
   const targetDistricts = ["Nyabihu", "Musanze", "Rubavu", "Gicumbi", "Gasabo"];
   const now = new Date();
 
-  for (const dName of targetDistricts) {
-    const dId = districtMap.get(dName);
-    if (!dId) continue;
+  await Promise.all(
+    targetDistricts.map(async (dName) => {
+      const dId = districtMap.get(dName);
+      if (!dId) return;
 
-    // Delete old seed rainfall records for clean state
-    await prisma.rainfallRecord.deleteMany({ where: { districtId: dId } });
+      await prisma.rainfallRecord.deleteMany({ where: { districtId: dId } });
 
-    for (let i = 13; i >= 0; i--) {
-      const recordDate = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      let baseMm = 15;
-      if (dName === "Nyabihu") baseMm = 65 + Math.sin(i) * 35 + (i < 3 ? 40 : 0);
-      else if (dName === "Musanze") baseMm = 45 + Math.cos(i) * 25;
-      else baseMm = 20 + Math.random() * 20;
+      const recordsToCreate = [];
+      for (let i = 13; i >= 0; i--) {
+        const recordDate = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        let baseMm = 15;
+        if (dName === "Nyabihu") baseMm = 65 + Math.sin(i) * 35 + (i < 3 ? 40 : 0);
+        else if (dName === "Musanze") baseMm = 45 + Math.cos(i) * 25;
+        else baseMm = 20 + Math.random() * 20;
 
-      const rainfallMm = Math.max(0, Math.round(baseMm * 10) / 10);
-      const soilSaturation = Math.min(98, Math.max(20, Math.round((rainfallMm * 0.8 + 30) * 10) / 10));
+        const rainfallMm = Math.max(0, Math.round(baseMm * 10) / 10);
+        const soilSaturation = Math.min(98, Math.max(20, Math.round((rainfallMm * 0.8 + 30) * 10) / 10));
 
-      await prisma.rainfallRecord.create({
-        data: {
+        recordsToCreate.push({
           districtId: dId,
           date: recordDate,
           rainfallMm,
@@ -167,12 +173,14 @@ async function main() {
           notes: i === 0 ? "Heavy localized precipitation recorded at weather station." : "Standard automatic telemetry sync.",
           source: DataSource.MANUAL,
           createdById: officialUser.id,
-        },
-      });
-    }
-  }
+        });
+      }
 
-  // 4. Create Initial Alerts
+      await prisma.rainfallRecord.createMany({ data: recordsToCreate });
+    })
+  );
+
+  // 4. Initial Alerts
   if (nyabihuId) {
     await prisma.alert.deleteMany({ where: { districtId: nyabihuId } });
     await prisma.alert.createMany({
@@ -183,7 +191,7 @@ async function main() {
           message: "CRITICAL FLOOD WARNING: Heavy rain in Nyabihu high elevation slopes. Move to higher grounds immediately.",
           simulated: false,
           triggeredById: officialUser.id,
-          sentAt: new Date(now.getTime() - 2 * 60 * 60 * 1000), // 2 hours ago
+          sentAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
         },
         {
           districtId: nyabihuId,
@@ -191,24 +199,9 @@ async function main() {
           message: "Moderate flood risk warning: Sustained precipitation may cause river overflows in low basin zones.",
           simulated: true,
           triggeredById: officialUser.id,
-          sentAt: new Date(now.getTime() - 24 * 60 * 60 * 1000), // 24 hours ago
+          sentAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
         },
       ],
-    });
-  }
-
-  const musanzeId = districtMap.get("Musanze");
-  if (musanzeId) {
-    await prisma.alert.deleteMany({ where: { districtId: musanzeId } });
-    await prisma.alert.create({
-      data: {
-        districtId: musanzeId,
-        riskLevel: RiskLevel.MEDIUM,
-        message: "ADVISORY: Increased surface runoff expected near volcanic foothills. Drive with caution.",
-        simulated: true,
-        triggeredById: officialUser.id,
-        sentAt: new Date(now.getTime() - 5 * 60 * 60 * 1000),
-      },
     });
   }
 
@@ -232,66 +225,7 @@ async function main() {
     });
   }
 
-  if (musanzeId) {
-    await prisma.prediction.deleteMany({ where: { districtId: musanzeId } });
-    await prisma.prediction.create({
-      data: {
-        districtId: musanzeId,
-        riskLevel: RiskLevel.MEDIUM,
-        confidence: 88.0,
-        reasoning: "Moderate risk: 55mm rainfall over volcanic foothills with 70% soil capacity requires continuous monitoring.",
-        inputData: {
-          rainfallMm: 55,
-          daysOfRain: 3,
-          slope: 18.0,
-          soilSaturation: 70,
-          elevation: 1850,
-        },
-      },
-    });
-  }
-
-  const rubavuId = districtMap.get("Rubavu");
-  if (rubavuId) {
-    await prisma.prediction.deleteMany({ where: { districtId: rubavuId } });
-    await prisma.prediction.create({
-      data: {
-        districtId: rubavuId,
-        riskLevel: RiskLevel.LOW,
-        confidence: 91.2,
-        reasoning: "Low risk: Mild 18mm precipitation with moderate soil capacity presents minimal threat of inundation.",
-        inputData: {
-          rainfallMm: 18,
-          daysOfRain: 2,
-          slope: 12.0,
-          soilSaturation: 45,
-          elevation: 1500,
-        },
-      },
-    });
-  }
-
-  const gicumbiId = districtMap.get("Gicumbi");
-  if (gicumbiId) {
-    await prisma.prediction.deleteMany({ where: { districtId: gicumbiId } });
-    await prisma.prediction.create({
-      data: {
-        districtId: gicumbiId,
-        riskLevel: RiskLevel.HIGH,
-        confidence: 89.4,
-        reasoning: "High risk: Sustained 92mm rainfall on steep 20° high mountain slopes presents high landslide and runoff risk.",
-        inputData: {
-          rainfallMm: 92,
-          daysOfRain: 4,
-          slope: 20.0,
-          soilSaturation: 82,
-          elevation: 2100,
-        },
-      },
-    });
-  }
-
-  console.log("Seeding completed successfully!");
+  console.log("Neon Seeding completed successfully!");
 }
 
 main()
@@ -301,4 +235,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });
