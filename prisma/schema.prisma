@@ -1,0 +1,148 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+
+enum Role {
+  ADMIN
+  OFFICIAL
+  RESIDENT
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum DataSource {
+  MANUAL
+  UPLOAD
+}
+
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(RESIDENT)
+  isActive  Boolean  @default(true)
+
+  districtId String?
+  district   District? @relation(fields: [districtId], references: [id])
+
+  isVerified         Boolean   @default(false)
+  verificationToken  String?   @unique
+  verificationExpiry DateTime?
+
+  resetToken  String?   @unique
+  resetExpiry DateTime?
+
+  rainfallRecords RainfallRecord[] @relation("CreatedByUser")
+  alertsSent      Alert[]          @relation("TriggeredByUser")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+
+model District {
+  id       String @id @default(cuid())
+  name     String @unique
+  province String
+
+  elevation     Float? 
+  slope         Float? 
+  latitude      Float?
+  longitude     Float?
+
+  cells           Cell[]
+  users           User[]
+  rainfallRecords RainfallRecord[]
+  predictions     Prediction[]
+  alerts          Alert[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("districts")
+}
+
+model Cell {
+  id         String   @id @default(cuid())
+  name       String
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([districtId, name])
+  @@map("cells")
+}
+
+
+model RainfallRecord {
+  id         String   @id @default(cuid())
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+
+  date             DateTime
+  rainfallMm       Float
+  soilSaturation   Float? 
+  notes            String?
+
+  source      DataSource @default(MANUAL)
+  createdById String?
+  createdBy   User?      @relation("CreatedByUser", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([districtId, date])
+  @@map("rainfall_records")
+}
+
+
+model Prediction {
+  id         String   @id @default(cuid())
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+
+  riskLevel  RiskLevel
+  confidence Float 
+  reasoning  String? @db.Text
+
+  inputData Json
+
+  createdAt DateTime @default(now())
+
+  @@index([districtId, createdAt])
+  @@map("predictions")
+}
+
+
+
+model Alert {
+  id         String   @id @default(cuid())
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+
+  riskLevel   RiskLevel
+  message     String
+  simulated   Boolean  @default(true)
+
+  triggeredById String?
+  triggeredBy   User?   @relation("TriggeredByUser", fields: [triggeredById], references: [id])
+
+  sentAt DateTime @default(now())
+
+  @@index([districtId, sentAt])
+  @@map("alerts")
+}
