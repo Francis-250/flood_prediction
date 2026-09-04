@@ -13,29 +13,146 @@ if (!connectionString) {
   throw new Error("DATABASE_URL is required");
 }
 
+function getSslConfig(connectionString: string) {
+  if (
+    process.env.DATABASE_SSL === "false" ||
+    process.env.DATABASE_SSL === "0"
+  ) {
+    return false;
+  }
+  if (process.env.DATABASE_SSL === "true" || process.env.DATABASE_SSL === "1") {
+    return { rejectUnauthorized: false };
+  }
+
+  try {
+    const url = new URL(connectionString);
+    const sslmode = url.searchParams.get("sslmode");
+
+    if (sslmode === "disable") {
+      return false;
+    }
+
+    if (
+      sslmode === "require" ||
+      sslmode === "prefer" ||
+      sslmode === "verify-ca" ||
+      sslmode === "verify-full"
+    ) {
+      return { rejectUnauthorized: false };
+    }
+
+    const isLocal =
+      url.hostname === "localhost" ||
+      url.hostname === "127.0.0.1" ||
+      url.hostname === "0.0.0.0" ||
+      url.hostname.endsWith(".local");
+
+    if (isLocal) {
+      return false;
+    }
+
+    return { rejectUnauthorized: false };
+  } catch {
+    return false;
+  }
+}
+
 const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false },
+  ssl: getSslConfig(connectionString),
 });
 
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log("Seeding Neon database at:", connectionString?.split("@")[1] || "Neon Host");
+  console.log(
+    "Seeding Neon database at:",
+    connectionString?.split("@")[1] || "Neon Host",
+  );
 
   // 1. Create Districts
   const districtConfigs = [
-    { name: "Nyabihu", province: "North", elevation: 2200, slope: 22.5, lat: -1.65, lng: 29.50 },
-    { name: "Musanze", province: "North", elevation: 1850, slope: 18.0, lat: -1.50, lng: 29.63 },
-    { name: "Rubavu", province: "West", elevation: 1500, slope: 12.0, lat: -1.68, lng: 29.26 },
-    { name: "Gicumbi", province: "North", elevation: 2100, slope: 20.0, lat: -1.60, lng: 30.07 },
-    { name: "Gasabo", province: "Kigali City", elevation: 1450, slope: 10.0, lat: -1.95, lng: 30.11 },
-    { name: "Karongi", province: "West", elevation: 1600, slope: 15.0, lat: -2.06, lng: 29.35 },
-    { name: "Bugesera", province: "East", elevation: 1300, slope: 5.0, lat: -2.25, lng: 30.08 },
-    { name: "Burera", province: "North", elevation: 1900, slope: 19.0, lat: -1.45, lng: 29.80 },
-    { name: "Ngororero", province: "West", elevation: 1750, slope: 21.0, lat: -1.86, lng: 29.56 },
-    { name: "Kicukiro", province: "Kigali City", elevation: 1400, slope: 7.0, lat: -1.98, lng: 30.12 },
+    {
+      name: "Nyabihu",
+      province: "North",
+      elevation: 2200,
+      slope: 22.5,
+      lat: -1.65,
+      lng: 29.5,
+    },
+    {
+      name: "Musanze",
+      province: "North",
+      elevation: 1850,
+      slope: 18.0,
+      lat: -1.5,
+      lng: 29.63,
+    },
+    {
+      name: "Rubavu",
+      province: "West",
+      elevation: 1500,
+      slope: 12.0,
+      lat: -1.68,
+      lng: 29.26,
+    },
+    {
+      name: "Gicumbi",
+      province: "North",
+      elevation: 2100,
+      slope: 20.0,
+      lat: -1.6,
+      lng: 30.07,
+    },
+    {
+      name: "Gasabo",
+      province: "Kigali City",
+      elevation: 1450,
+      slope: 10.0,
+      lat: -1.95,
+      lng: 30.11,
+    },
+    {
+      name: "Karongi",
+      province: "West",
+      elevation: 1600,
+      slope: 15.0,
+      lat: -2.06,
+      lng: 29.35,
+    },
+    {
+      name: "Bugesera",
+      province: "East",
+      elevation: 1300,
+      slope: 5.0,
+      lat: -2.25,
+      lng: 30.08,
+    },
+    {
+      name: "Burera",
+      province: "North",
+      elevation: 1900,
+      slope: 19.0,
+      lat: -1.45,
+      lng: 29.8,
+    },
+    {
+      name: "Ngororero",
+      province: "West",
+      elevation: 1750,
+      slope: 21.0,
+      lat: -1.86,
+      lng: 29.56,
+    },
+    {
+      name: "Kicukiro",
+      province: "Kigali City",
+      elevation: 1400,
+      slope: 7.0,
+      lat: -1.98,
+      lng: 30.12,
+    },
   ];
 
   const districtMap = new Map<string, string>();
@@ -91,11 +208,11 @@ async function main() {
                 districtId: district.id,
                 name: cellName,
               },
-            })
-          )
+            }),
+          ),
         );
       }
-    })
+    }),
   );
 
   // 2. Create Users
@@ -158,26 +275,33 @@ async function main() {
       for (let i = 13; i >= 0; i--) {
         const recordDate = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
         let baseMm = 15;
-        if (dName === "Nyabihu") baseMm = 65 + Math.sin(i) * 35 + (i < 3 ? 40 : 0);
+        if (dName === "Nyabihu")
+          baseMm = 65 + Math.sin(i) * 35 + (i < 3 ? 40 : 0);
         else if (dName === "Musanze") baseMm = 45 + Math.cos(i) * 25;
         else baseMm = 20 + Math.random() * 20;
 
         const rainfallMm = Math.max(0, Math.round(baseMm * 10) / 10);
-        const soilSaturation = Math.min(98, Math.max(20, Math.round((rainfallMm * 0.8 + 30) * 10) / 10));
+        const soilSaturation = Math.min(
+          98,
+          Math.max(20, Math.round((rainfallMm * 0.8 + 30) * 10) / 10),
+        );
 
         recordsToCreate.push({
           districtId: dId,
           date: recordDate,
           rainfallMm,
           soilSaturation,
-          notes: i === 0 ? "Heavy localized precipitation recorded at weather station." : "Standard automatic telemetry sync.",
+          notes:
+            i === 0
+              ? "Heavy localized precipitation recorded at weather station."
+              : "Standard automatic telemetry sync.",
           source: DataSource.MANUAL,
           createdById: officialUser.id,
         });
       }
 
       await prisma.rainfallRecord.createMany({ data: recordsToCreate });
-    })
+    }),
   );
 
   // 4. Initial Alerts
@@ -188,7 +312,8 @@ async function main() {
         {
           districtId: nyabihuId,
           riskLevel: RiskLevel.HIGH,
-          message: "CRITICAL FLOOD WARNING: Heavy rain in Nyabihu high elevation slopes. Move to higher grounds immediately.",
+          message:
+            "CRITICAL FLOOD WARNING: Heavy rain in Nyabihu high elevation slopes. Move to higher grounds immediately.",
           simulated: false,
           triggeredById: officialUser.id,
           sentAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
@@ -196,7 +321,8 @@ async function main() {
         {
           districtId: nyabihuId,
           riskLevel: RiskLevel.MEDIUM,
-          message: "Moderate flood risk warning: Sustained precipitation may cause river overflows in low basin zones.",
+          message:
+            "Moderate flood risk warning: Sustained precipitation may cause river overflows in low basin zones.",
           simulated: true,
           triggeredById: officialUser.id,
           sentAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
@@ -213,7 +339,8 @@ async function main() {
         districtId: nyabihuId,
         riskLevel: RiskLevel.HIGH,
         confidence: 93.5,
-        reasoning: "High risk: 105mm rainfall combined with 88% soil saturation on 22.5° steep slopes creates severe runaway runoff conditions.",
+        reasoning:
+          "High risk: 105mm rainfall combined with 88% soil saturation on 22.5° steep slopes creates severe runaway runoff conditions.",
         inputData: {
           rainfallMm: 105,
           daysOfRain: 4,
